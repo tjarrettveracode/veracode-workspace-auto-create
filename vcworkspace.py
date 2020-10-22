@@ -8,7 +8,6 @@ import string
 import datetime
 
 from veracode_api_py import VeracodeAPI as vapi
-#from helpers.api import VeracodeAPI as vapi
 
 def creds_expire_days_warning():
     creds = vapi().get_creds()
@@ -33,18 +32,18 @@ def create_workspace(app_info):
     #check to see if workspace already exists
     existing_workspace = vapi().get_workspace_by_name(workspace_name)
 
-    if existing_workspace != []:
-        if existing_workspace[0].get('id','') != '':
-            warning = "There is already a workspace named {} for application guid {}".format(workspace_name, app_id)
-            logging.info(warning)
-            print(warning)
-            return 0
+    if ((existing_workspace != []) and (existing_workspace[0].get('id','') != '')):
+        warning = "There is already a workspace named {} for application guid {}".\
+            format(workspace_name, app_id)
+        logging.info(warning)
+        print(warning)
+        return 0
 
     #create the workspace with the SCA API
     payload = {'name':workspace_name}
-    payloadObject = json.dumps(payload)
-    logging.debug("Sending payload {}".format(payloadObject))
-    workspace_location = vapi().create_workspace(payloadObject)
+    payloadobject = json.dumps(payload)
+    logging.debug("Sending payload {}".format(payloadobject))
+    workspace_location = vapi().create_workspace(payloadobject)
     logging.debug("Workspace location url is {}".format(workspace_location))
 
     workspace_guid = get_workspace_guid_from_location(workspace_location)
@@ -133,7 +132,7 @@ def main():
         print("Evaluating {} applications for workspace creation".format(len(apps)))
 
         for app_info in apps:
-            r = create_workspace(app_info)
+            create_workspace(app_info)
     elif cleanup:
         delete_workspaces()
     else:
@@ -142,7 +141,7 @@ def main():
             return 0
         
         app_info = get_app_info(app_id)
-        r = create_workspace(app_info)
+        create_workspace(app_info)
 
 if __name__ == '__main__':
     main()
