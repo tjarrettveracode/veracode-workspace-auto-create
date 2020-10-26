@@ -40,14 +40,7 @@ def create_workspace(app_info):
         return 0
 
     #create the workspace with the SCA API
-    payload = {'name':workspace_name}
-    payloadobject = json.dumps(payload)
-    logging.debug("Sending payload {}".format(payloadobject))
-    workspace_location = vapi().create_workspace(payloadobject)
-    logging.debug("Workspace location url is {}".format(workspace_location))
-
-    workspace_guid = get_workspace_guid_from_location(workspace_location)
-    logging.debug("Workspace guid is {}".format(workspace_guid))
+    workspace_guid = vapi().create_workspace(workspace_name)
 
     #assign the teams with the SCA API
     if app_teams != []:
@@ -72,9 +65,6 @@ def get_workspace_name(app_name):
 
     workspacename = workspacename[0:20] # only the first 20 characters
     return workspacename
-
-def get_workspace_guid_from_location(loc):
-    return loc.split("/")[-1]
 
 def delete_workspaces():
     workspaces = get_workspaces()
