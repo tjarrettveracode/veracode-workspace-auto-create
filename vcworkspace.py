@@ -7,7 +7,15 @@ import time
 import string
 import datetime
 
+import anticrlf
 from veracode_api_py import VeracodeAPI as vapi
+
+log = logging.getLogger(__name__)
+
+def setup_logger():
+    handler = logging.FileHandler('vcworkspace.log', encoding='utf8')
+    handler.setFormatter(anticrlf.LogFormatter('%(asctime)s - %(levelname)s - %(funcName)s - %(message)s'))
+    logging.basicConfig(level=logging.INFO, handlers=[handler])
 
 def creds_expire_days_warning():
     creds = vapi().get_creds()
@@ -17,7 +25,7 @@ def creds_expire_days_warning():
         print('These API credentials expire ', creds['expiration_ts'])
 
 def get_app_info(guid):
-    logging.debug('Getting application info for guid {}'.format(guid))
+    log.debug('Getting application info for guid {}'.format(guid))
     app_info = vapi().get_app(guid)
     return app_info
 
@@ -27,7 +35,7 @@ def create_workspace(app_info):
     app_teams = app_info['profile']['teams']
 
     workspace_name = get_workspace_name(app_name)
-    logging.info('Application name "{}" will have workspace name "{}" due to workspace naming requirements'.format(app_name,workspace_name))
+    log.info('Application name "{}" will have workspace name "{}" due to workspace naming requirements'.format(app_name,workspace_name))
 
     #check to see if workspace already exists
     existing_workspace = vapi().get_workspace_by_name(workspace_name)
@@ -35,7 +43,7 @@ def create_workspace(app_info):
     if ((existing_workspace != []) and (existing_workspace[0].get('id','') != '')):
         warning = "There is already a workspace named {} for application guid {}".\
             format(workspace_name, app_id)
-        logging.info(warning)
+        log.warning(warning)
         print(warning)
         return 0
 
@@ -49,7 +57,7 @@ def create_workspace(app_info):
             vapi().add_workspace_team(workspace_guid,team_id)
 
     success = "Created workspace named {} with {} teams".format(workspace_name, len(app_teams))
-    logging.info(success)
+    log.info(success)
     #print(success)
 
 def get_workspace_name(app_name):
@@ -74,7 +82,7 @@ def delete_workspaces():
     for workspace in workspaces:
         deleted += delete_workspace(workspace)
     success = "Deleted {} workspaces".format(deleted)
-    logging.info(success)
+    log.info(success)
     print(success)
 
 def get_workspaces():
@@ -86,11 +94,11 @@ def get_project_count(workspace):
 def delete_workspace(workspace):
     projects = get_project_count(workspace)
     if projects == 0:
-        logging.info("Deleting workspace {} (ID {})".format(workspace['name'],workspace['id']))
+        log.info("Deleting workspace {} (ID {})".format(workspace['name'],workspace['id']))
         vapi().delete_workspace(workspace['id'])
         return 1
     else:
-        logging.info("Skipping workspace {} (ID {}) with {} projects".format(workspace['name'],\
+        log.info("Skipping workspace {} (ID {}) with {} projects".format(workspace['name'],\
             workspace['id'],projects))
         return 0
 
@@ -99,14 +107,9 @@ def main():
         description='This script sets up a new workspace in Veracode SCA for the application profile(s) \
             specified in the arguments, and assigns teams based on the application profile settings.')
     parser.add_argument('-a', '--app_id', help='App GUID for which to set up a workspace. Ignored if -l is provided.')
-    parser.add_argument('-l', '--all', help='If set to "TRUE", set up workspaces for all applications.')
-    parser.add_argument('-c', '--cleanup', help='If set to "TRUE", delete all workspaces with no projects.')
+    parser.add_argument('--all', action="store_true", help='If specified, set up workspaces for all applications.')
+    parser.add_argument('--cleanup', action="store_true", help='If specified, delete all workspaces with no projects.')
     args = parser.parse_args()
-
-    logging.basicConfig(filename='vcworkspace.log',
-                        format='%(asctime)s - %(levelname)s - %(funcName)s - %(message)s',
-                        datefmt='%m/%d/%Y %I:%M:%S%p',
-                        level=logging.INFO)
 
     # CHECK FOR CREDENTIALS EXPIRATION
     creds_expire_days_warning()
@@ -114,8 +117,8 @@ def main():
     # set up args
 
     app_id = args.app_id
-    app_all = ( args.all == "TRUE")
-    cleanup = (args.cleanup == "TRUE")
+    app_all = args.all
+    cleanup = args.cleanup
 
     if app_all:
         apps = vapi().get_apps()
@@ -134,4 +137,5 @@ def main():
         create_workspace(app_info)
 
 if __name__ == '__main__':
+    setup_logger()
     main()
